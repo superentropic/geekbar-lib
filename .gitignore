@@ -1,0 +1,33 @@
+# Visual Studio user and workspace files
+.vs/
+*.vcxproj.user
+*.suo
+*.user
+
+# Build output and intermediate files
+[Bb]uild/
+[Bb]uilds/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+**/x64/
+**/x86/
+**/[Dd]ebug/
+**/[Rr]elease/
+**/intermediate/
+
+# Compiled binaries and debug artifacts
+*.exe
+*.dll
+*.lib
+*.exp
+*.obj
+*.pdb
+*.idb
+*.ipdb
+*.iobj
+*.ilk
+*.tlog
+*.log
+*.recipe
