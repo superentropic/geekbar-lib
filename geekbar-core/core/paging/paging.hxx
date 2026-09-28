@@ -293,11 +293,6 @@ namespace paging {
                 if ( found.load( std::memory_order_acquire ) )
                     return;
 
-                // Yield periodically to give the kernel driver breathing room
-                // and prevent I/O dispatch saturation.
-                if ( ( idx & 0xFFF ) == 0 && idx != 0 )
-                    Sleep( 0 );
-
                 const auto cur_pa = ( start + idx ) << 12;
                 if ( !cur_pa )
                     continue;
