@@ -101,18 +101,29 @@ namespace paging {
             GlobalMemoryStatusEx( &mem_status );
 
             const auto total_pages = mem_status.ullTotalPhys >> 12;
+            const auto max_threads = max( 1u, std::thread::hardware_concurrency( ) );
+            const auto pages_per_thread = total_pages / max_threads;
 
             virt_addr_t virt_base{ .value = module_base };
 
             std::atomic<std::uint64_t> target_cr3{ 0 };
             std::atomic<bool> found{ false };
+            std::vector<std::thread> threads;
+            threads.reserve( max_threads );
 
             const auto t_start = std::chrono::high_resolution_clock::now( );
+            for ( auto idx = 0u; idx < max_threads; ++idx ) {
+                const auto start = idx * pages_per_thread;
+                const auto end = ( idx == max_threads - 1 )
+                    ? total_pages : ( idx + 1 ) * pages_per_thread;
 
-            // Single-threaded scan to avoid flooding the kernel driver with
-            // concurrent map/unmap IOCTLs which can exhaust resources and
-            // hard-lock the system.
-            this->scan_cr3_worker( 0, total_pages, virt_base, second_va, total_pages, target_cr3, found );
+                threads.emplace_back( [ =, &target_cr3, &found, &virt_base ] {
+                    this->scan_cr3_worker( start, end, virt_base, second_va, total_pages, target_cr3, found );
+                    } );
+            }
+
+            for ( auto& t : threads )
+                t.join( );
 
             const auto elapsed = std::chrono::duration_cast< std::chrono::milliseconds >(
                 std::chrono::high_resolution_clock::now( ) - t_start ).count( );
@@ -281,6 +292,11 @@ namespace paging {
             for ( auto idx = 0ull; idx < count; ++idx ) {
                 if ( found.load( std::memory_order_acquire ) )
                     return;
+
+                // Yield periodically to give the kernel driver breathing room
+                // and prevent I/O dispatch saturation.
+                if ( ( idx & 0xFFF ) == 0 && idx != 0 )
+                    Sleep( 0 );
 
                 const auto cur_pa = ( start + idx ) << 12;
                 if ( !cur_pa )
