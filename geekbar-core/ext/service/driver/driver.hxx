@@ -150,10 +150,11 @@ namespace driver {
                 size_t chunk = min( size - offset, 0x1000 - page_off );
 
                 void* view = map_physical_memory( page_base, 0x1000 );
-                if ( view ) {
-                    memcpy( dst + offset, ( uint8_t* )view + page_off, chunk );
-                    unmap_physical_memory( view );
-                }
+                if ( !view )
+                    return false;
+
+                memcpy( dst + offset, ( uint8_t* )view + page_off, chunk );
+                unmap_physical_memory( view );
 
                 offset += chunk;
             }
